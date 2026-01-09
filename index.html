@@ -90,6 +90,11 @@
             <p>1日1回、ゲーム内通貨「FEA」を無料で受け取れます。</p>
             <p><strong>現在の配布量:</strong> 10,000 FEA / 24h</p>
             <button id="faucetBtn" class="locked-btn" onclick="claimFaucet()" disabled>同意してFEAを受け取る</button>
+            <p style="margin-top:15px; font-size:0.9em; text-align:center;">
+                <a href="#" onclick="addTokenToWallet()" style="color:#007bff;">
+                    🦊 MetaMaskにFEAを表示させる
+                </a>
+            </p>
         </div>
 
         <div class="card">
@@ -263,6 +268,29 @@
                 alert("エラー: " + (e.reason || e.message)); 
             }
         }
+
+        // ★MetaMaskにFeaTokenを表示させる関数
+        async function addTokenToWallet() {
+            if (!window.ethereum) return alert("MetaMaskが必要です");
+
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_watchAsset',
+                    params: {
+                        type: 'ERC20', 
+                        options: {
+                            address: FEA_ADDRESS, // 設定エリアの変数を使います
+                            symbol: 'FEA',        // 通貨シンボル
+                            decimals: 18,         // 桁数
+                            // image: 'https://.../logo.png', // ロゴ画像があればURLを指定可
+                        },
+                    },
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
     </script>
 </body>
 </html>
