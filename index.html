@@ -228,7 +228,7 @@
         async function claimFaucet() {
             if(!signer) return alert("先にウォレットを接続してください");
             try {
-                const tx = await feaContract.faucet({ gasPrice: 0, gasLimit: 50000000 });
+                const tx = await feaContract.faucet({ gasPrice: 0, gasLimit: 500000 });
                 alert("申請しました！処理を待っています...");
                 await tx.wait();
                 alert("10,000 FEA 受け取り完了！");
@@ -253,12 +253,12 @@
                 if(requiredFeaFloat <= 0) return alert("価格または数量が小さすぎます");
 
                 // 1. Approve
-                const tx1 = await feaContract.approve(DEX_ADDRESS, feaAmountWei, { gasPrice: 0, gasLimit: 50000000 });
+                const tx1 = await feaContract.approve(DEX_ADDRESS, feaAmountWei, { gasPrice: 0, gasLimit: 500000 });
                 alert(`承認処理中... 必要FEA: ${requiredFeaFloat}`);
                 await tx1.wait();
 
                 // 2. Create
-                const tx2 = await dexContract.createTokenAndMarket(name, symbol, tokenAmountWei, feaAmountWei, { gasPrice: 0, gasLimit: 50000000 });
+                const tx2 = await dexContract.createTokenAndMarket(name, symbol, tokenAmountWei, feaAmountWei, { gasPrice: 0, gasLimit: 5000000 });
                 alert("発行処理中...");
                 await tx2.wait();
 
