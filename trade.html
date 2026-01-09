@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>フィー(FEA)交易所 - FEA745 Virtual Trade</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.10.0/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.min.js"></script>
+
+    <style>
+        :root { --primary: #007bff; --bg: #f4f7f6; --card-bg: #ffffff; --text: #333; }
+        body { font-family: "Segoe UI", sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+        nav { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        nav a { text-decoration: none; color: #555; margin-left: 20px; font-weight: bold; }
+        .logo { font-size: 1.2em; font-weight: bold; color: var(--primary); }
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 300px; background: white; border-right: 1px solid #ddd; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; }
+        .token-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; border-radius: 8px; margin-bottom: 5px; }
+        .token-item:hover { background: #f0f8ff; }
+        .token-item.active { background: #e7f1ff; border-left: 4px solid var(--primary); }
+        .token-symbol { font-weight: bold; font-size: 1.1em; }
+        .token-name { font-size: 0.8em; color: #666; }
+        .token-price { float: right; font-weight: bold; color: var(--primary); }
+        .content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .chart-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); height: 400px; position: relative; }
+        .trade-card { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-weight: bold; color: #999; }
+        .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .tab.sell-tab.active { color: #dc3545; border-bottom-color: #dc3545; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1.1em; }
+        .action-btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; color: white; margin-top: 10px; }
+        .btn-buy { background: var(--primary); }
+        .btn-buy:hover { background: #0056b3; }
+        .btn-sell { background: #dc3545; }
+        .btn-sell:hover { background: #c82333; }
+        .info-row { display: flex; justify-content: space-between; font-size: 0.9em; color: #666; margin-bottom: 5px; }
+        #loadingChart { position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(255,255,255,0.8); padding:10px 20px; border-radius:5px; font-weight:bold; display:none; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">Fea Exchange 📊</div>
+        <div>
+            <a href="index.html">🏠 ホーム</a>
+            <a href="trade.html">📈 取引所</a>
+        </div>
+        <button id="connectBtn" style="margin-left:20px; padding:8px 15px; cursor:pointer;">接続</button>
+    </nav>
+
+    <div class="main-container">
+        <div class="sidebar" id="tokenList">
+            <div style="padding:10px; text-align:center; color:#999;">読込中...</div>
+        </div>
+
+        <div class="content" id="mainContent" style="visibility: hidden;">
+            <div class="chart-card">
+                <h2 id="chartTitle" style="margin:0 0 10px 0;">Chart</h2>
+                <div id="loadingChart">履歴データを取得中...</div>
+                <canvas id="priceChart"></canvas>
+            </div>
+
+            <div class="trade-card">
+                <div class="tabs">
+                    <div class="tab active" onclick="setMode('buy')" id="tabBuy">買う (Buy)</div>
+                    <div class="tab" onclick="setMode('sell')" id="tabSell">売る (Sell)</div>
+                </div>
+                <div class="info-row">
+                    <span>あなたの残高:</span>
+                    <span id="userBalance">0</span>
+                </div>
+                <label>数量入力:</label>
+                <input type="number" id="inputAmount" placeholder="0.0">
+                <div class="info-row" style="margin-top:5px;">
+                    <span>予想レート:</span>
+                    <span id="ratePreview">1 Token = ? FEA</span>
+                </div>
+                <button id="actionBtn" class="action-btn btn-buy" onclick="executeSwap()">FEAで買う</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ▼▼▼ 設定エリア (更新してください！) ▼▼▼
+        const RPC_URL = "https://rpc.fea745virtualtrade.com"; 
+        const CHAIN_ID = 745n;
+        const FEA_ADDRESS = "0xC56A096b8d4f649eAcBE935afA68C98FB8F2fC13";
+        const DEX_ADDRESS = "0xfb171c6911D8756f62f60Ea7d44e1Edd0B79214A";
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+        // ABI (イベント引数が増えたので更新)
+        const DEX_ABI = [
+            "function allTokens(uint256) view returns (address)",
+            "function pools(address) view returns (uint256, uint256, bool)",
+            "function swap(address token, bool isBuying, uint256 amountIn) external",
+            // イベント定義 (indexed token が重要)
+            "event Swapped(address indexed token, address indexed user, string action, uint256 amountIn, uint256 amountOut)"
+        ];
+        const ERC20_ABI = [
+            "function name() view returns (string)",
+            "function symbol() view returns (string)",
+            "function balanceOf(address) view returns (uint256)",
+            "function approve(address, uint256) returns (bool)",
+            "function allowance(address, address) view returns (uint256)"
+        ];
+
+        let provider, signer, dexContract, feaContract;
+        let currentToken = null;
+        let isBuying = true;
+        let chartInstance = null;
+        let priceInterval = null;
+
+        async function init() {
+            if (window.ethereum) {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                document.getElementById("connectBtn").onclick = connect;
+                try {
+                    const accounts = await provider.listAccounts();
+                    if(accounts.length > 0) connect();
+                } catch(e){}
+            } else {
+                alert("MetaMaskが必要です");
+            }
+        }
+
+        async function connect() {
+            signer = await provider.getSigner();
+            const network = await provider.getNetwork();
+            if(network.chainId != CHAIN_ID) return alert("Fea Chain(745)に切り替えてください。");
+            
+            dexContract = new ethers.Contract(DEX_ADDRESS, DEX_ABI, signer);
+            feaContract = new ethers.Contract(FEA_ADDRESS, ERC20_ABI, signer);
+            
+            document.getElementById("connectBtn").innerText = "接続済み";
+            loadTokenList();
+        }
+
+        async function loadTokenList() {
+            const listEl = document.getElementById("tokenList");
+            listEl.innerHTML = "";
+            let index = 0;
+            while(true) {
+                try {
+                    const tokenAddr = await dexContract.allTokens(index);
+                    const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, provider);
+                    const [name, symbol, poolData] = await Promise.all([
+                        tokenContract.name(), tokenContract.symbol(), dexContract.pools(tokenAddr)
+                    ]);
+                    const feaRes = parseFloat(ethers.formatEther(poolData[0]));
+                    const tokenRes = parseFloat(ethers.formatEther(poolData[1]));
+                    const price = tokenRes > 0 ? (feaRes / tokenRes) : 0;
+
+                    const item = document.createElement("div");
+                    item.className = "token-item";
+                    item.innerHTML = `<div class="token-symbol">${symbol} <span class="token-price">${price.toFixed(4)} FEA</span></div><div class="token-name">${name}</div>`;
+                    item.onclick = () => selectToken(tokenAddr, symbol, name, item);
+                    listEl.appendChild(item);
+                    index++;
+                } catch (e) { break; }
+            }
+        }
+
+        async function selectToken(address, symbol, name, domElement) {
+            document.querySelectorAll(".token-item").forEach(el => el.classList.remove("active"));
+            domElement.classList.add("active");
+            document.getElementById("mainContent").style.visibility = "visible";
+            document.getElementById("chartTitle").innerText = `${symbol} / FEA (24h Chart)`;
+
+            currentToken = { address, symbol, name };
+            updateUserBalance();
+            
+            // 過去データの読み込みとチャート開始
+            loadChartHistory();
+        }
+
+        // ★★★ 履歴チャート読み込み関数 ★★★
+        async function loadChartHistory() {
+            if(priceInterval) clearInterval(priceInterval);
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+
+            // ローディング表示
+            document.getElementById("loadingChart").style.display = "block";
+
+            // 空のチャートを初期化
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Price (FEA)',
+                        data: [],
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.1,
+                        fill: true,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'time', time: { unit: 'hour' } } // 時間軸を使用
+                    }
+                }
+            });
+
+            try {
+                // 1. ブロック範囲の計算 (24時間 = 約17280ブロック @ 5秒/ブロック)
+                const currentBlock = await provider.getBlockNumber();
+                const blocksPerDay = (24 * 60 * 60) / 5; 
+                const startBlock = Math.max(0, currentBlock - blocksPerDay);
+
+                // 2. イベントの検索 (フィルター: このトークンのSwappedイベントのみ)
+                const filter = dexContract.filters.Swapped(currentToken.address);
+                const events = await dexContract.queryFilter(filter, startBlock, currentBlock);
+
+                // 3. データ処理
+                const chartData = [];
+                for (const event of events) {
+                    const block = await event.getBlock(); // ブロックの時刻を取得
+                    const args = event.args; // 引数: [token, user, action, amountIn, amountOut]
+                    
+                    const amountIn = parseFloat(ethers.formatEther(args[3]));
+                    const amountOut = parseFloat(ethers.formatEther(args[4]));
+                    const action = args[2]; // "Buy" or "Sell"
+
+                    let price = 0;
+                    if (action === "Buy") {
+                        // Buy: 払ったFEA(in) / 得たToken(out)
+                        price = amountIn / amountOut;
+                    } else {
+                        // Sell: 得たFEA(out) / 払ったToken(in)
+                        price = amountOut / amountIn;
+                    }
+
+                    chartData.push({ x: block.timestamp * 1000, y: price });
+                }
+
+                // 4. チャートに反映
+                chartInstance.data.datasets[0].data = chartData;
+                chartInstance.update();
+
+            } catch(e) {
+                console.error("Chart Error:", e);
+            } finally {
+                document.getElementById("loadingChart").style.display = "none";
+            }
+
+            // リアルタイム更新の開始 (5秒ごとに最新価格を追加)
+            priceInterval = setInterval(async () => {
+                const pool = await dexContract.pools(currentToken.address);
+                const feaRes = parseFloat(ethers.formatEther(pool[0]));
+                const tokenRes = parseFloat(ethers.formatEther(pool[1]));
+                const price = tokenRes > 0 ? (feaRes / tokenRes) : 0;
+                
+                chartInstance.data.datasets[0].data.push({ x: Date.now(), y: price });
+                chartInstance.update();
+                
+                // レート表示更新
+                document.getElementById("ratePreview").innerText = `Rate: 1 ${currentToken.symbol} ≒ ${price.toFixed(4)} FEA`;
+            }, 5000);
+        }
+
+        function setMode(mode) {
+            isBuying = (mode === 'buy');
+            document.getElementById("tabBuy").className = isBuying ? "tab active" : "tab";
+            document.getElementById("tabSell").className = isBuying ? "tab" : "tab sell-tab active";
+            const btn = document.getElementById("actionBtn");
+            btn.className = isBuying ? "action-btn btn-buy" : "action-btn btn-sell";
+            btn.innerText = isBuying ? "FEAで買う" : "売る";
+            updateUserBalance();
+        }
+
+        async function updateUserBalance() {
+            if(!currentToken || !signer) return;
+            let balance;
+            if(isBuying) {
+                balance = await feaContract.balanceOf(await signer.getAddress());
+                document.getElementById("userBalance").innerText = `${parseFloat(ethers.formatEther(balance)).toFixed(2)} FEA`;
+            } else {
+                const tContract = new ethers.Contract(currentToken.address, ERC20_ABI, signer);
+                balance = await tContract.balanceOf(await signer.getAddress());
+                document.getElementById("userBalance").innerText = `${parseFloat(ethers.formatEther(balance)).toFixed(2)} ${currentToken.symbol}`;
+            }
+        }
+
+        async function executeSwap() {
+            const val = document.getElementById("inputAmount").value;
+            if(!val || val <= 0) return alert("数量を入力してください");
+            try {
+                const amountWei = ethers.parseEther(val);
+                if (isBuying) {
+                    const allow = await feaContract.allowance(await signer.getAddress(), DEX_ADDRESS);
+                    if (allow < amountWei) {
+                        const tx = await feaContract.approve(DEX_ADDRESS, amountWei);
+                        await tx.wait();
+                    }
+                } else {
+                    const tContract = new ethers.Contract(currentToken.address, ERC20_ABI, signer);
+                    const allow = await tContract.allowance(await signer.getAddress(), DEX_ADDRESS);
+                    if (allow < amountWei) {
+                        const tx = await tContract.approve(DEX_ADDRESS, amountWei);
+                        await tx.wait();
+                    }
+                }
+                alert("交換処理中...");
+                const tx = await dexContract.swap(currentToken.address, isBuying, amountWei);
+                await tx.wait();
+                alert("完了！");
+                document.getElementById("inputAmount").value = "";
+                updateUserBalance();
+                // イベント検知より早くチャート更新したい場合、ここで強制更新も可
+            } catch(e) {
+                console.error(e);
+                alert("エラー: " + (e.reason || e.message));
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

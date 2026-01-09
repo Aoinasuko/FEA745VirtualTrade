@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FEA745 Virtual Trade</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.10.0/ethers.umd.min.js"></script>
+    <style>
+        :root { --primary: #007bff; --bg: #f0f8ff; --text: #333; --disabled: #b0c4de; }
+        body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+        
+        nav { background: white; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        nav a { text-decoration: none; color: #555; margin-left: 20px; font-weight: bold; }
+        nav a:hover { color: var(--primary); }
+        .logo { font-size: 1.2em; font-weight: bold; color: var(--primary); }
+
+        .container { max-width: 800px; margin: 20px auto; padding: 20px; }
+        
+        .card { background: white; padding: 25px; margin-bottom: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.4em; }
+        p { line-height: 1.6; }
+
+        /* ボタンのデザイン */
+        button { background: var(--primary); color: white; border: none; padding: 12px 20px; cursor: pointer; border-radius: 8px; font-size: 16px; transition: 0.2s; width: 100%; margin-top: 10px; }
+        button:hover { background: #0056b3; transform: translateY(-1px); }
+        
+        /* ★無効化（ロック）時のボタンスタイル */
+        button:disabled { background: var(--disabled) !important; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.7; }
+
+        input { padding: 12px; width: 100%; box-sizing: border-box; margin-top: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+
+        .status-bar { text-align: center; margin-bottom: 20px; font-weight: bold; color: #666; }
+        .donation-box { background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; font-size: 0.9em; word-break: break-all; }
+
+        /* ★規約同意エリアのデザイン */
+        .agreement-card { 
+            background: #fff0f0; 
+            border: 2px solid #ffcccc; 
+            padding: 20px; 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            text-align: center;
+        }
+        .agreement-label {
+            font-weight: bold;
+            font-size: 1.1em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .agreement-label input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin: 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">FEA745 Virtual Trade</div>
+        <div>
+            <a href="trade.html">📈 取引所 (DEX)</a>
+            <a href="howto.html">🔰 遊び方</a>
+            <a href="terms.html">利用規約</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="status-bar">
+            <button id="connectBtn" style="width:auto; padding: 8px 30px;">ウォレット接続</button>
+            <p>状態: <span id="status">未接続</span></p>
+        </div>
+
+        <div class="agreement-card">
+            <label class="agreement-label">
+                <input type="checkbox" id="agreeCheckbox" onchange="toggleAgreement()">
+                <span>
+                    <a href="terms.html" target="_blank" style="color:#d9534f; text-decoration:underline;">利用規約</a>
+                    を読み、内容に同意します。
+                </span>
+            </label>
+        </div>
+
+        <div class="card">
+            <h2>🎁 ログインボーナス (Faucet)</h2>
+            <p>1日1回、ゲーム内通貨「FEA」を無料で受け取れます。</p>
+            <p><strong>現在の配布量:</strong> 10,000 FEA / 24h</p>
+            <button id="faucetBtn" class="locked-btn" onclick="claimFaucet()" disabled>同意してFEAを受け取る</button>
+        </div>
+
+        <div class="card">
+            <h2>💰 オリジナルコイン発行</h2>
+            <p>1B枚発行し、その一部を市場に流します。<br>
+            価格を安く設定すれば、少ないFEAで大量に上場できます。</p>
+            
+            <input type="text" id="tokenName" placeholder="コインの名前 (例: Neko Coin)">
+            <input type="text" id="tokenSymbol" placeholder="シンボル (例: NEKO)">
+            
+            <label style="display:block; margin-top:10px; font-size:0.9em;">市場に出す枚数:</label>
+            <input type="number" id="initTokenAmount" placeholder="例: 10000" value="10000">
+
+            <label style="display:block; margin-top:10px; font-size:0.9em;">初期価格 (FEA/枚):</label>
+            <input type="number" id="initPrice" placeholder="0.0001 ～ 1.0" step="0.0001" min="0.0001" max="1.0" value="1.0">
+            
+            <p style="text-align:right; margin:5px 0; font-size:0.9em; color:#666;">
+                必要な手数料: <span id="requiredFea">10000</span> FEA
+            </p>
+
+            <button id="createBtn" class="locked-btn" onclick="createToken()" disabled>同意して発行 & 上場する</button>
+        </div>
+
+        <div class="card">
+            <h2>🤝 サーバー維持費の寄付</h2>
+            <p>Polygon(POL)を以下の外部アドレスに寄付していただいた方には、お礼として自動的にFEAを送付します。</p>
+            <div class="donation-box">
+                <strong>寄付先アドレス (Polygon Chain):</strong><br>
+                <span id="donationAddress">0x...</span>
+            </div>
+            <p style="text-align: right; font-size: 0.9em;">レート: 1 POL = 10,000 FEA</p>
+        </div>
+    </div>
+
+    <script>
+        // ▼▼▼ 設定エリア ▼▼▼
+        const RPC_URL = "https://fea745virtualtrade.com";
+        const CHAIN_ID = 745n;
+        const FEA_ADDRESS = "0xC56A096b8d4f649eAcBE935afA68C98FB8F2fC13";
+        const DEX_ADDRESS = "0xfb171c6911D8756f62f60Ea7d44e1Edd0B79214A";
+        const DONATION_ADDR_DISPLAY = "0x49fDd0ee0b2E03e8e6711eDC618ec0E05ccda270"; 
+        // ▲▲▲▲▲▲▲▲▲▲▲▲
+
+        document.getElementById("donationAddress").innerText = DONATION_ADDR_DISPLAY;
+
+        let provider, signer, feaContract, dexContract;
+
+        const FEA_ABI = [
+            "function faucet() external",
+            "function approve(address spender, uint256 amount) external returns (bool)"
+        ];
+        const DEX_ABI = [
+            "function createTokenAndMarket(string name, string symbol, uint256 tokenAmount, uint256 feaAmount) external"
+        ];
+
+        // --- ★規約同意の制御ロジック ---
+        function toggleAgreement() {
+            const checkbox = document.getElementById("agreeCheckbox");
+            const isChecked = checkbox.checked;
+            
+            // locked-btn クラスがついたボタンを一括制御
+            const buttons = document.querySelectorAll(".locked-btn");
+            buttons.forEach(btn => {
+                btn.disabled = !isChecked;
+                // ボタンの文字も少し変えると親切
+                if(btn.id === "faucetBtn") btn.innerText = isChecked ? "FEAを受け取る" : "同意してFEAを受け取る";
+                if(btn.id === "createBtn") btn.innerText = isChecked ? "発行 & 上場する" : "同意して発行 & 上場する";
+            });
+
+            // 状態をブラウザに保存 (次回アクセス時に自動チェックするため)
+            if(isChecked) {
+                localStorage.setItem("fea_terms_agreed", "true");
+            } else {
+                localStorage.removeItem("fea_terms_agreed");
+            }
+        }
+
+        // ページ読み込み時に、以前同意したかチェックする
+        window.onload = function() {
+            const agreed = localStorage.getItem("fea_terms_agreed");
+            if (agreed === "true") {
+                document.getElementById("agreeCheckbox").checked = true;
+                toggleAgreement(); // ボタンを有効化
+            }
+        };
+
+        // --- 以下、通常のロジック ---
+
+        async function connect() {
+            if (!window.ethereum) return alert("MetaMaskをインストールしてください");
+            
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            
+            feaContract = new ethers.Contract(FEA_ADDRESS, FEA_ABI, signer);
+            dexContract = new ethers.Contract(DEX_ADDRESS, DEX_ABI, signer);
+
+            const network = await provider.getNetwork();
+            document.getElementById("status").innerText = `接続中 (Chain ID: ${network.chainId})`;
+            document.getElementById("connectBtn").innerText = "接続済み";
+
+            if (network.chainId != CHAIN_ID) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0x' + Number(CHAIN_ID).toString(16),
+                            chainName: 'Fea 745 Network',
+                            nativeCurrency: { name: 'FEA', symbol: 'FEA', decimals: 18 },
+                            rpcUrls: [RPC_URL]
+                        }]
+                    });
+                } catch (e) {
+                    alert("ネットワーク切替エラー: " + e.message);
+                }
+            }
+        }
+
+        document.getElementById("connectBtn").onclick = connect;
+
+        // 計算ロジック
+        function updateRequiredFea() {
+            const amount = parseFloat(document.getElementById("initTokenAmount").value) || 0;
+            const price = parseFloat(document.getElementById("initPrice").value) || 0;
+            const req = amount * price;
+            document.getElementById("requiredFea").innerText = req.toLocaleString(undefined, { maximumFractionDigits: 6 });
+        }
+        document.getElementById("initTokenAmount").oninput = updateRequiredFea;
+        document.getElementById("initPrice").oninput = updateRequiredFea;
+
+        async function claimFaucet() {
+            if(!signer) return alert("先にウォレットを接続してください");
+            try {
+                const tx = await feaContract.faucet();
+                alert("申請しました！処理を待っています...");
+                await tx.wait();
+                alert("10,000 FEA 受け取り完了！");
+            } catch (e) { alert("エラー: " + (e.reason || e.message)); }
+        }
+
+        async function createToken() {
+            if(!signer) return alert("先にウォレットを接続してください");
+            
+            const name = document.getElementById("tokenName").value;
+            const symbol = document.getElementById("tokenSymbol").value;
+            const tokenVal = document.getElementById("initTokenAmount").value;
+            const priceVal = document.getElementById("initPrice").value;
+            
+            if(!name || !symbol || !tokenVal || !priceVal) return alert("項目を全て入力してください");
+
+            try {
+                const tokenAmountWei = ethers.parseEther(tokenVal);
+                const requiredFeaFloat = parseFloat(tokenVal) * parseFloat(priceVal);
+                const feaAmountWei = ethers.parseEther(requiredFeaFloat.toFixed(18));
+
+                if(requiredFeaFloat <= 0) return alert("価格または数量が小さすぎます");
+
+                // 1. Approve
+                const tx1 = await feaContract.approve(DEX_ADDRESS, feaAmountWei);
+                alert(`承認処理中... 必要FEA: ${requiredFeaFloat}`);
+                await tx1.wait();
+
+                // 2. Create
+                const tx2 = await dexContract.createTokenAndMarket(name, symbol, tokenAmountWei, feaAmountWei);
+                alert("発行処理中...");
+                await tx2.wait();
+                
+                alert(`完了！ ${name} が市場に上場しました。`);
+            } catch (e) { 
+                console.error(e);
+                alert("エラー: " + (e.reason || e.message)); 
+            }
+        }
+    </script>
+</body>
+</html>

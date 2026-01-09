@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遊び方ガイド - FEA745 Virtual Trade</title>
+    <style>
+        :root { --primary: #007bff; --accent: #ffc107; --bg: #f0f8ff; --text: #333; }
+        body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); line-height: 1.8; }
+
+        /* ナビゲーション */
+        nav { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        nav a { text-decoration: none; color: #555; font-weight: bold; display: inline-flex; align-items: center; }
+        nav a:hover { color: var(--primary); }
+
+        /* コンテナ */
+        .container { max-width: 800px; margin: 30px auto; padding: 0 20px; padding-bottom: 50px; }
+
+        /* タイトルまわり */
+        h1 { text-align: center; color: var(--primary); margin-bottom: 10px; font-size: 2em; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 40px; font-weight: normal; }
+
+        /* ステップカード */
+        .step-card { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; overflow: hidden; }
+        .step-number { background: var(--primary); color: white; display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 15px; font-size: 0.9em; }
+        h2 { margin-top: 0; margin-bottom: 15px; font-size: 1.5em; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+
+        /* ボタン */
+        .btn-setup { background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; padding: 15px 30px; border-radius: 50px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; display: block; width: 100%; max-width: 300px; margin: 20px auto; text-align: center; text-decoration: none; }
+        .btn-setup:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+
+        /* 注意書きボックス */
+        .note-box { background: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin-top: 20px; font-size: 0.9em; border-radius: 4px; }
+
+        /* 画像プレースホルダー (スクリーンショットを貼る場所) */
+        .img-placeholder { background: #e9ecef; border: 2px dashed #ced4da; border-radius: 8px; height: 150px; display: flex; align-items: center; justify-content: center; color: #6c757d; margin: 20px 0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="index.html">← ホームに戻る</a>
+    </nav>
+
+    <div class="container">
+        <h1>🔰 初心者向け遊び方ガイド</h1>
+        <p class="subtitle">お金をかけずに、自分だけのコインを作って遊ぼう！</p>
+
+        <div class="step-card">
+            <div class="step-number">STEP 1</div>
+            <h2>お財布（MetaMask）を用意する</h2>
+            <p>このゲームで遊ぶには、インターネット上の通貨を入れる「お財布」が必要です。<br>
+            ここでは<strong>「MetaMask（メタマスク）」</strong>という無料アプリを使いましょう。</p>
+
+            <ul>
+                <li><strong>パソコンの方:</strong> Google Chromeなどの拡張機能としてブラウザに入れます。</li>
+                <li><strong>スマホの方:</strong> アプリストアからダウンロードします。</li>
+            </ul>
+
+            <a href="https://metamask.io/download/" target="_blank" class="btn-setup">🦊 MetaMaskをダウンロード</a>
+
+            <div class="note-box">
+                <strong>⚠️ とても重要な注意</strong><br>
+                登録時に表示される<strong>「シークレットリカバリーフレーズ（12個の英単語）」</strong>は、絶対に他人に教えないでください。これを教えると、お財布の中身をすべて盗まれてしまいます。
+            </div>
+        </div>
+
+        <div class="step-card">
+            <div class="step-number">STEP 2</div>
+            <h2>ゲームの世界に接続する</h2>
+            <p>MetaMaskを入れただけでは、このゲーム（FEA745 Virtual Trade）には繋がりません。<br>
+            以下のボタンを押すと、自動的にこのゲーム専用の回線設定を追加します。</p>
+
+            <button onclick="addNetwork()" class="btn-setup">🌐 ゲームの設定を追加する</button>
+            <p style="text-align:center; font-size:0.9em; color:#666;">MetaMaskが開き「承認」を求めてくるので、OKを押してください。</p>
+        </div>
+
+        <div class="step-card">
+            <div class="step-number">STEP 3</div>
+            <h2>軍資金（FEA）をもらう</h2>
+            <p>準備完了！まずは元手となるゲーム内通貨「FEA」を手に入れましょう。</p>
+            <ol>
+                <li>トップページの<strong>「ウォレット接続」</strong>ボタンを押す。</li>
+                <li><strong>「ログインボーナス (Faucet)」</strong>のボタンを押す。</li>
+                <li>少し待つと、あなたの財布に <strong>10,000 FEA</strong> が入ります！</li>
+            </ol>
+            <p>※24時間に1回受け取れます。</p>
+        </div>
+
+        <div class="step-card">
+            <div class="step-number">STEP 4</div>
+            <h2>コインを作ったり、売買したりする</h2>
+            <p>FEAを使って、自由に遊んでみましょう。</p>
+            
+            <h3>💰 自分だけのコインを作る</h3>
+            <p>「オリジナルコイン発行」コーナーで、好きな名前のコインを作れます。<br>
+            発行するには少しだけFEAを手数料として払います。「初期価格」を安く（例: 0.001）設定すれば、少ないFEAで大量に市場に流せます。</p>
+
+            <h3>📈 取引所（DEX）で遊ぶ</h3>
+            <p>誰かが作ったコインの価格が上がったり下がったりします。<br>
+            「取引所」ページでチャートを見ながら、安い時に買って高い時に売るトレーダーごっこができます。</p>
+        </div>
+
+        <div class="step-card">
+            <div class="step-number">おまけ</div>
+            <h2>サーバー支援（寄付）について</h2>
+            <p>もしこのゲームが楽しかったら、サーバー維持費の寄付（PolygonチェーンのPOL通貨）をお願いしています。</p>
+            <p>寄付してくれた方には、お礼としてゲーム内で使えるFEAを自動でお送りします。<br>
+            詳しくはトップページの「寄付情報」をご覧ください。</p>
+        </div>
+
+    </div>
+
+    <script>
+        // 設定エリア (あなたのドメイン)
+        const RPC_URL = "https://fea745virtualtrade.com";
+        const CHAIN_ID = "0x2E9"; // 745の16進数表記
+
+        async function addNetwork() {
+            if (!window.ethereum) {
+                alert("先にSTEP 1のMetaMaskインストールを行ってください！");
+                return;
+            }
+
+            try {
+                // MetaMaskにネットワーク追加リクエストを送る
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: CHAIN_ID,
+                        chainName: 'Fea 745 Network', // MetaMaskに表示される名前
+                        nativeCurrency: {
+                            name: 'FEA',
+                            symbol: 'FEA',
+                            decimals: 18
+                        },
+                        rpcUrls: [RPC_URL],
+                        blockExplorerUrls: null // エクスプローラーはないのでnull
+                    }]
+                });
+                alert("設定完了！\nネットワークが「Fea 745 Network」に切り替わりました。");
+            } catch (error) {
+                console.error(error);
+                alert("エラーが発生しました: " + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
