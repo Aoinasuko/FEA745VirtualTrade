@@ -128,11 +128,26 @@
         async function connect() {
             signer = await provider.getSigner();
             const network = await provider.getNetwork();
-            if(network.chainId != CHAIN_ID) return alert("Fea Chain(745)に切り替えてください。");
-            
+
+            if (network.chainId != CHAIN_ID) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0x' + Number(CHAIN_ID).toString(16),
+                            chainName: 'Fea 745 Network',
+                            nativeCurrency: { name: 'Fea Gas', symbol: 'FGAS', decimals: 18 },
+                            rpcUrls: [RPC_URL]
+                        }]
+                    });
+                } catch (e) {
+                    alert("ネットワーク切替エラー: " + e.message);
+                }
+            }
+
             dexContract = new ethers.Contract(DEX_ADDRESS, DEX_ABI, signer);
             feaContract = new ethers.Contract(FEA_ADDRESS, ERC20_ABI, signer);
-            
+
             document.getElementById("connectBtn").innerText = "接続済み";
             loadTokenList();
         }

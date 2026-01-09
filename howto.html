@@ -125,19 +125,14 @@
             try {
                 // MetaMaskにネットワーク追加リクエストを送る
                 await window.ethereum.request({
-                    method: 'wallet_addEthereumChain',
-                    params: [{
-                        chainId: CHAIN_ID,
-                        chainName: 'Fea 745 Network', // MetaMaskに表示される名前
-                        nativeCurrency: {
-                            name: 'FEA',
-                            symbol: 'FEA',
-                            decimals: 18
-                        },
-                        rpcUrls: [RPC_URL],
-                        blockExplorerUrls: null // エクスプローラーはないのでnull
-                    }]
-                });
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: CHAIN_ID,
+                            chainName: 'Fea 745 Network',
+                            nativeCurrency: { name: 'Fea Gas', symbol: 'FGAS', decimals: 18 },
+                            rpcUrls: [RPC_URL]
+                        }]
+                    });
                 alert("設定完了！\nネットワークが「Fea 745 Network」に切り替わりました。");
             } catch (error) {
                 console.error(error);
