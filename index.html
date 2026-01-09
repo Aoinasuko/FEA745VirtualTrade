@@ -237,12 +237,12 @@
 
         async function createToken() {
             if(!signer) return alert("先にウォレットを接続してください");
-            
+
             const name = document.getElementById("tokenName").value;
             const symbol = document.getElementById("tokenSymbol").value;
             const tokenVal = document.getElementById("initTokenAmount").value;
             const priceVal = document.getElementById("initPrice").value;
-            
+
             if(!name || !symbol || !tokenVal || !priceVal) return alert("項目を全て入力してください");
 
             try {
@@ -261,11 +261,11 @@
                 const tx2 = await dexContract.createTokenAndMarket(name, symbol, tokenAmountWei, feaAmountWei);
                 alert("発行処理中...");
                 await tx2.wait();
-                
+
                 alert(`完了！ ${name} が市場に上場しました。`);
-            } catch (e) { 
+            } catch (e) {
                 console.error(e);
-                alert("エラー: " + (e.reason || e.message)); 
+                alert("エラー: " + (e.reason || e.message));
             }
         }
 
@@ -279,10 +279,10 @@
                     params: {
                         type: 'ERC20', 
                         options: {
-                            address: FEA_ADDRESS, // 設定エリアの変数を使います
-                            symbol: 'FEA',        // 通貨シンボル
-                            decimals: 18,         // 桁数
-                            // image: 'https://.../logo.png', // ロゴ画像があればURLを指定可
+                            address: FEA_ADDRESS,
+                            symbol: 'FEA',
+                            decimals: 18,
+                            image: 'https://black-holy-cod-224.mypinata.cloud/ipfs/bafybeihbztltu33k2k4yge2fublhvru5wtiibgvrnra2gc44o54n4xcpaq',
                         },
                     },
                 });
