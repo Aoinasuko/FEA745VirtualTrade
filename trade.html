@@ -310,19 +310,19 @@
                 if (isBuying) {
                     const allow = await feaContract.allowance(await signer.getAddress(), DEX_ADDRESS);
                     if (allow < amountWei) {
-                        const tx = await feaContract.approve(DEX_ADDRESS, amountWei, { gasPrice: 0 });
+                        const tx = await feaContract.approve(DEX_ADDRESS, amountWei, { gasPrice: 0, gasLimit: 500000 });
                         await tx.wait();
                     }
                 } else {
                     const tContract = new ethers.Contract(currentToken.address, ERC20_ABI, signer);
                     const allow = await tContract.allowance(await signer.getAddress(), DEX_ADDRESS);
                     if (allow < amountWei) {
-                        const tx = await tContract.approve(DEX_ADDRESS, amountWei, { gasPrice: 0 });
+                        const tx = await tContract.approve(DEX_ADDRESS, amountWei, { gasPrice: 0, gasLimit: 500000 });
                         await tx.wait();
                     }
                 }
                 alert("交換処理中...");
-                const tx = await dexContract.swap(currentToken.address, isBuying, amountWei, { gasPrice: 0 });
+                const tx = await dexContract.swap(currentToken.address, isBuying, amountWei, { gasPrice: 0, gasLimit: 500000 });
                 await tx.wait();
                 alert("完了！");
                 document.getElementById("inputAmount").value = "";
