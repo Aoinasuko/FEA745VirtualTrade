@@ -363,7 +363,7 @@
                     }
                     chartInstance.update();
                     
-                    document.getElementById("ratePreview").innerText = `Rate: 1 ${currentToken.symbol} ≒ ${price.toFixed(4)} FEA`;
+                    document.getElementById("ratePreview").innerText = `Rate: 1 ${currentToken.symbol} ≒ ${price.toFixed(8)} FEA`;
                 } catch(e){}
             }, 5000);
         }
