@@ -11,10 +11,14 @@
     <style>
         :root { --primary: #007bff; --bg: #f4f7f6; --card-bg: #ffffff; --text: #333; }
         body { font-family: "Segoe UI", sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+        
         nav { background: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         nav a { text-decoration: none; color: #555; margin-left: 20px; font-weight: bold; }
         .logo { font-size: 1.2em; font-weight: bold; color: var(--primary); }
+
         .main-container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* サイドバー */
         .sidebar { width: 300px; background: white; border-right: 1px solid #ddd; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; }
         .token-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; border-radius: 8px; margin-bottom: 5px; }
         .token-item:hover { background: #f0f8ff; }
@@ -22,27 +26,44 @@
         .token-symbol { font-weight: bold; font-size: 1.1em; }
         .token-name { font-size: 0.8em; color: #666; }
         .token-price { float: right; font-weight: bold; color: var(--primary); }
+
+        /* コンテンツ */
         .content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* チャート */
         .chart-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); height: 400px; position: relative; }
+        #loadingChart { position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(255,255,255,0.9); padding:10px 20px; border-radius:5px; font-weight:bold; color:#666; }
+
+        /* 取引パネル */
         .trade-card { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        
         .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
         .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; font-weight: bold; color: #999; }
         .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
         .tab.sell-tab.active { color: #dc3545; border-bottom-color: #dc3545; }
+
         input { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1.1em; }
+        
         .action-btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; color: white; margin-top: 10px; }
         .btn-buy { background: var(--primary); }
         .btn-buy:hover { background: #0056b3; }
         .btn-sell { background: #dc3545; }
         .btn-sell:hover { background: #c82333; }
+
         .info-row { display: flex; justify-content: space-between; font-size: 0.9em; color: #666; margin-bottom: 5px; }
-        #loadingChart { position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(255,255,255,0.8); padding:10px 20px; border-radius:5px; font-weight:bold; display:none; }
+        
+        /* MetaMask追加ボタン */
+        .add-mm-btn { background: #e2e6ea; border: none; color: #333; cursor: pointer; padding: 5px 10px; border-radius: 20px; font-size: 0.8em; display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; transition: 0.2s; }
+        .add-mm-btn:hover { background: #dbe2e8; }
+        
+        /* バーナーウォレット制御 */
+        .burner-control { font-size:0.9em; background:#fff3cd; padding:10px; border-radius:5px; margin-bottom:10px; text-align:center;}
     </style>
 </head>
 <body>
 
     <nav>
-        <div class="logo">フィー(FEA)交易所 📊</div>
+        <div class="logo">Fea Exchange 📊</div>
         <div>
             <a href="index.html">🏠 ホーム</a>
             <a href="trade.html">📈 取引所</a>
@@ -56,54 +77,79 @@
         </div>
 
         <div class="content" id="mainContent" style="visibility: hidden;">
+            
             <div class="chart-card">
-                <h2 id="chartTitle" style="margin:0 0 10px 0;">Chart</h2>
+                <div style="display:flex; align-items:center; margin-bottom:10px;">
+                    <h2 id="chartTitle" style="margin:0;">Chart</h2>
+                    <button class="add-mm-btn" onclick="addCurrentTokenToWallet()">
+                        🦊 ウォレットに追加
+                    </button>
+                </div>
                 <div id="loadingChart">履歴データを取得中...</div>
                 <canvas id="priceChart"></canvas>
             </div>
 
             <div class="trade-card">
+                <div class="burner-control">
+                    <strong>⚡ 高速取引モード (Burner)</strong><br>
+                    <span id="burnerStatus">未設定</span>
+                    <div id="burnerButtons" style="margin-top:5px;">
+                        <button onclick="setupBurnerWallet()">利用開始</button>
+                    </div>
+                    <div id="burnerPanel" style="display:none; margin-top:5px; border-top:1px dashed #ccc; padding-top:5px;">
+                        <small>残高: <span id="burnerBalance">0</span> FEA</small><br>
+                        <input type="number" id="depositAmount" placeholder="Amount" style="width:80px; padding:5px; font-size:0.8em;">
+                        <button onclick="depositToBurner()" style="font-size:0.8em;">入金</button>
+                        <button onclick="withdrawFromBurner()" style="font-size:0.8em;">全額出金</button>
+                    </div>
+                </div>
+
                 <div class="tabs">
                     <div class="tab active" onclick="setMode('buy')" id="tabBuy">買う (Buy)</div>
                     <div class="tab" onclick="setMode('sell')" id="tabSell">売る (Sell)</div>
                 </div>
+
                 <div class="info-row">
                     <span>あなたの残高:</span>
                     <span id="userBalance">0</span>
                 </div>
+
                 <label>数量入力:</label>
                 <input type="number" id="inputAmount" placeholder="0.0">
+                
                 <div class="info-row" style="margin-top:5px;">
                     <span>予想レート:</span>
                     <span id="ratePreview">1 Token = ? FEA</span>
                 </div>
+
                 <button id="actionBtn" class="action-btn btn-buy" onclick="executeSwap()">FEAで買う</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ▼▼▼ 設定エリア (更新してください！) ▼▼▼
+        // ▼▼▼ 設定エリア (環境に合わせて更新してください) ▼▼▼
         const RPC_URL = "https://fea745virtualtrade.com"; 
         const CHAIN_ID = 745n;
         const FEA_ADDRESS = "0x6b94D5B9E88Ff2D6fFA88297892a54427a8d0623";
         const DEX_ADDRESS = "0x0a103cd4a36902Ae6ca0af8503D1d887432B02dA";
         // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-        // ABI (イベント引数が増えたので更新)
         const DEX_ABI = [
             "function allTokens(uint256) view returns (address)",
             "function pools(address) view returns (uint256, uint256, bool)",
             "function swap(address token, bool isBuying, uint256 amountIn) external",
-            // イベント定義 (indexed token が重要)
+            // イベント定義 (重要: ここが違うと履歴が取れません)
             "event Swapped(address indexed token, address indexed user, string action, uint256 amountIn, uint256 amountOut)"
         ];
         const ERC20_ABI = [
             "function name() view returns (string)",
             "function symbol() view returns (string)",
+            "function decimals() view returns (uint8)",
             "function balanceOf(address) view returns (uint256)",
             "function approve(address, uint256) returns (bool)",
-            "function allowance(address, address) view returns (uint256)"
+            "function allowance(address, address) view returns (uint256)",
+            "function transfer(address, uint256) returns (bool)"
         ];
 
         let provider, signer, dexContract, feaContract;
@@ -111,6 +157,10 @@
         let isBuying = true;
         let chartInstance = null;
         let priceInterval = null;
+        
+        // Burner Wallet用
+        let burnerWallet = null;
+        let useBurner = false;
 
         async function init() {
             if (window.ethereum) {
@@ -126,43 +176,33 @@
         }
 
         async function connect() {
-            signer = await provider.getSigner();
-            const network = await provider.getNetwork();
-
-            if (network.chainId != CHAIN_ID) {
-                try {
-                    await window.ethereum.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [{
-                            chainId: '0x' + Number(CHAIN_ID).toString(16),
-                            chainName: 'Fea 745 Network',
-                            nativeCurrency: { name: 'Fea Gas', symbol: 'FGAS', decimals: 18 },
-                            rpcUrls: [RPC_URL]
-                        }]
-                    });
-                } catch (e) {
-                    alert("ネットワーク切替エラー: " + e.message);
-                }
-            }
-
-            dexContract = new ethers.Contract(DEX_ADDRESS, DEX_ABI, signer);
-            feaContract = new ethers.Contract(FEA_ADDRESS, ERC20_ABI, signer);
-
-            document.getElementById("connectBtn").innerText = "接続済み";
-            loadTokenList();
+            try {
+                signer = await provider.getSigner();
+                const network = await provider.getNetwork();
+                if(network.chainId != CHAIN_ID) return alert("Fea Chain (745) に切り替えてください。");
+                
+                dexContract = new ethers.Contract(DEX_ADDRESS, DEX_ABI, signer);
+                feaContract = new ethers.Contract(FEA_ADDRESS, ERC20_ABI, signer);
+                
+                document.getElementById("connectBtn").innerText = "接続済み";
+                loadTokenList();
+            } catch(e) { console.error(e); alert("接続エラー"); }
         }
 
+        // --- 1. トークン一覧読込 ---
         async function loadTokenList() {
             const listEl = document.getElementById("tokenList");
             listEl.innerHTML = "";
             let index = 0;
             while(true) {
                 try {
+                    // エラーが出るまで全トークンを取得
                     const tokenAddr = await dexContract.allTokens(index);
                     const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, provider);
                     const [name, symbol, poolData] = await Promise.all([
                         tokenContract.name(), tokenContract.symbol(), dexContract.pools(tokenAddr)
                     ]);
+                    
                     const feaRes = parseFloat(ethers.formatEther(poolData[0]));
                     const tokenRes = parseFloat(ethers.formatEther(poolData[1]));
                     const price = tokenRes > 0 ? (feaRes / tokenRes) : 0;
@@ -173,33 +213,66 @@
                     item.onclick = () => selectToken(tokenAddr, symbol, name, item);
                     listEl.appendChild(item);
                     index++;
-                } catch (e) { break; }
+                } catch (e) { 
+                    if(index === 0) listEl.innerHTML = "<div style='padding:10px'>まだトークンがありません</div>";
+                    break; 
+                }
             }
         }
 
+        // --- 2. トークン選択 ---
         async function selectToken(address, symbol, name, domElement) {
             document.querySelectorAll(".token-item").forEach(el => el.classList.remove("active"));
             domElement.classList.add("active");
             document.getElementById("mainContent").style.visibility = "visible";
-            document.getElementById("chartTitle").innerText = `${symbol} / FEA (24h Chart)`;
+            document.getElementById("chartTitle").innerText = `${symbol} / FEA`;
 
             currentToken = { address, symbol, name };
             updateUserBalance();
             
-            // 過去データの読み込みとチャート開始
+            // チャート読み込み開始
             loadChartHistory();
         }
 
-        // ★★★ 履歴チャート読み込み関数 ★★★
+        // --- ★ 機能追加: MetaMaskにトークンを追加 ---
+        async function addCurrentTokenToWallet() {
+            if(!currentToken) return;
+            try {
+                // ERC20コントラクトからdecimalsを取得（通常18だが念のため）
+                const tokenContract = new ethers.Contract(currentToken.address, ERC20_ABI, provider);
+                const decimals = await tokenContract.decimals();
+
+                await window.ethereum.request({
+                    method: 'wallet_watchAsset',
+                    params: {
+                        type: 'ERC20',
+                        options: {
+                            address: currentToken.address,
+                            symbol: currentToken.symbol,
+                            decimals: Number(decimals),
+                        },
+                    },
+                });
+            } catch (error) {
+                console.error(error);
+                alert("MetaMaskへの追加に失敗しました: " + error.message);
+            }
+        }
+
+        // --- ★ 修正: チャート履歴読込 ---
         async function loadChartHistory() {
+            // タイマー解除
             if(priceInterval) clearInterval(priceInterval);
+            
             const ctx = document.getElementById('priceChart').getContext('2d');
             if(chartInstance) chartInstance.destroy();
 
             // ローディング表示
-            document.getElementById("loadingChart").style.display = "block";
+            const loader = document.getElementById("loadingChart");
+            loader.style.display = "block";
+            loader.innerText = "履歴データを取得中...";
 
-            // 空のチャートを初期化
+            // 空チャートの作成
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -210,75 +283,93 @@
                         backgroundColor: 'rgba(0, 123, 255, 0.1)',
                         tension: 0.1,
                         fill: true,
-                        pointRadius: 2
+                        pointRadius: 3
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        x: { type: 'time', time: { unit: 'hour' } } // 時間軸を使用
-                    }
+                    scales: { x: { type: 'time', time: { unit: 'minute' } } }
                 }
             });
 
             try {
-                // 1. ブロック範囲の計算 (24時間 = 約17280ブロック @ 5秒/ブロック)
                 const currentBlock = await provider.getBlockNumber();
+                // 過去24時間分（リセット直後はマイナスになるのを防ぐ）
                 const blocksPerDay = (24 * 60 * 60) / 5; 
                 const startBlock = Math.max(0, currentBlock - blocksPerDay);
 
-                // 2. イベントの検索 (フィルター: このトークンのSwappedイベントのみ)
+                // イベント取得
                 const filter = dexContract.filters.Swapped(currentToken.address);
                 const events = await dexContract.queryFilter(filter, startBlock, currentBlock);
 
-                // 3. データ処理
+                // ★修正点: イベントが0件の場合は即終了してローディングを消す
+                if (events.length === 0) {
+                    console.log("No trade history found.");
+                    loader.style.display = "none";
+                    startRealtimeUpdate();
+                    return;
+                }
+
+                // データ処理
                 const chartData = [];
                 for (const event of events) {
-                    const block = await event.getBlock(); // ブロックの時刻を取得
-                    const args = event.args; // 引数: [token, user, action, amountIn, amountOut]
+                    // ブロック時刻取得（ここが少し重いかも）
+                    const block = await event.getBlock(); 
+                    const args = event.args; 
                     
                     const amountIn = parseFloat(ethers.formatEther(args[3]));
                     const amountOut = parseFloat(ethers.formatEther(args[4]));
-                    const action = args[2]; // "Buy" or "Sell"
+                    const action = args[2];
 
                     let price = 0;
-                    if (action === "Buy") {
-                        // Buy: 払ったFEA(in) / 得たToken(out)
-                        price = amountIn / amountOut;
-                    } else {
-                        // Sell: 得たFEA(out) / 払ったToken(in)
-                        price = amountOut / amountIn;
-                    }
+                    if (action === "Buy" && amountOut > 0) price = amountIn / amountOut;
+                    else if (action === "Sell" && amountIn > 0) price = amountOut / amountIn;
 
-                    chartData.push({ x: block.timestamp * 1000, y: price });
+                    if(price > 0) {
+                        chartData.push({ x: block.timestamp * 1000, y: price });
+                    }
                 }
 
-                // 4. チャートに反映
                 chartInstance.data.datasets[0].data = chartData;
                 chartInstance.update();
 
             } catch(e) {
                 console.error("Chart Error:", e);
+                loader.innerText = "データ取得エラー (Console参照)";
+                // エラーでも止まらないようにする
+                setTimeout(() => { loader.style.display = "none"; }, 2000);
             } finally {
-                document.getElementById("loadingChart").style.display = "none";
+                // 成功しても失敗してもローディングは消す
+                loader.style.display = "none";
+                startRealtimeUpdate();
             }
+        }
 
-            // リアルタイム更新の開始 (5秒ごとに最新価格を追加)
+        // リアルタイム更新（5秒毎）
+        function startRealtimeUpdate() {
             priceInterval = setInterval(async () => {
-                const pool = await dexContract.pools(currentToken.address);
-                const feaRes = parseFloat(ethers.formatEther(pool[0]));
-                const tokenRes = parseFloat(ethers.formatEther(pool[1]));
-                const price = tokenRes > 0 ? (feaRes / tokenRes) : 0;
-                
-                chartInstance.data.datasets[0].data.push({ x: Date.now(), y: price });
-                chartInstance.update();
-                
-                // レート表示更新
-                document.getElementById("ratePreview").innerText = `Rate: 1 ${currentToken.symbol} ≒ ${price.toFixed(4)} FEA`;
+                try {
+                    const pool = await dexContract.pools(currentToken.address);
+                    const feaRes = parseFloat(ethers.formatEther(pool[0]));
+                    const tokenRes = parseFloat(ethers.formatEther(pool[1]));
+                    const price = tokenRes > 0 ? (feaRes / tokenRes) : 0;
+                    
+                    // 現在時刻でプロット
+                    chartInstance.data.datasets[0].data.push({ x: Date.now(), y: price });
+                    
+                    // データが増えすぎたら古いものを消す
+                    if(chartInstance.data.datasets[0].data.length > 100) {
+                        chartInstance.data.datasets[0].data.shift();
+                    }
+                    chartInstance.update();
+                    
+                    document.getElementById("ratePreview").innerText = `Rate: 1 ${currentToken.symbol} ≒ ${price.toFixed(4)} FEA`;
+                } catch(e){}
             }, 5000);
         }
 
+        // --- 取引・Burner関連 ---
         function setMode(mode) {
             isBuying = (mode === 'buy');
             document.getElementById("tabBuy").className = isBuying ? "tab active" : "tab";
@@ -290,44 +381,105 @@
         }
 
         async function updateUserBalance() {
-            if(!currentToken || !signer) return;
-            let balance;
-            if(isBuying) {
-                balance = await feaContract.balanceOf(await signer.getAddress());
-                document.getElementById("userBalance").innerText = `${parseFloat(ethers.formatEther(balance)).toFixed(2)} FEA`;
-            } else {
-                const tContract = new ethers.Contract(currentToken.address, ERC20_ABI, signer);
-                balance = await tContract.balanceOf(await signer.getAddress());
-                document.getElementById("userBalance").innerText = `${parseFloat(ethers.formatEther(balance)).toFixed(2)} ${currentToken.symbol}`;
+            if(!currentToken) return;
+            // メイン(Signer)の残高
+            if(signer) {
+                let balance;
+                if(isBuying) balance = await feaContract.balanceOf(await signer.getAddress());
+                else {
+                    const tContract = new ethers.Contract(currentToken.address, ERC20_ABI, signer);
+                    balance = await tContract.balanceOf(await signer.getAddress());
+                }
+                document.getElementById("userBalance").innerText = parseFloat(ethers.formatEther(balance)).toFixed(2);
             }
+            // Burnerの残高
+            updateBurnerBalance();
+        }
+
+        // Burner Wallet
+        function setupBurnerWallet() {
+            let pk = localStorage.getItem("burner_pk");
+            if (!pk) {
+                pk = ethers.Wallet.createRandom().privateKey;
+                localStorage.setItem("burner_pk", pk);
+            }
+            const jsonProvider = new ethers.JsonRpcProvider(RPC_URL);
+            burnerWallet = new ethers.Wallet(pk, jsonProvider);
+            useBurner = true;
+            document.getElementById("burnerStatus").innerHTML = `<span style="color:green">ON</span> (${burnerWallet.address.substring(0,6)}...)`;
+            document.getElementById("burnerPanel").style.display = "block";
+            updateBurnerBalance();
+        }
+
+        async function updateBurnerBalance() {
+            if(!burnerWallet) return;
+            const c = new ethers.Contract(FEA_ADDRESS, ERC20_ABI, provider);
+            const bal = await c.balanceOf(burnerWallet.address);
+            document.getElementById("burnerBalance").innerText = parseFloat(ethers.formatEther(bal)).toFixed(2);
+        }
+
+        async function depositToBurner() {
+            if(!signer) return alert("MetaMask未接続");
+            const val = document.getElementById("depositAmount").value;
+            if(!val) return;
+            try {
+                const tx = await feaContract.transfer(burnerWallet.address, ethers.parseEther(val), { gasPrice: 0, gasLimit: 200000 });
+                await tx.wait();
+                alert("入金完了");
+                updateUserBalance();
+            } catch(e){ alert(e.message); }
+        }
+
+        async function withdrawFromBurner() {
+            if(!burnerWallet) return;
+            try {
+                const c = new ethers.Contract(FEA_ADDRESS, ERC20_ABI, burnerWallet);
+                const bal = await c.balanceOf(burnerWallet.address);
+                const tx = await c.transfer(await signer.getAddress(), bal, { gasPrice: 0, gasLimit: 200000 });
+                await tx.wait();
+                alert("出金完了");
+                updateUserBalance();
+            } catch(e){ alert(e.message); }
         }
 
         async function executeSwap() {
             const val = document.getElementById("inputAmount").value;
             if(!val || val <= 0) return alert("数量を入力してください");
+
             try {
                 const amountWei = ethers.parseEther(val);
+                let activeSigner = useBurner ? burnerWallet : signer;
+                const userAddr = activeSigner.address;
+
+                const activeFea = new ethers.Contract(FEA_ADDRESS, ERC20_ABI, activeSigner);
+                const activeDex = new ethers.Contract(DEX_ADDRESS, DEX_ABI, activeSigner);
+                const activeToken = new ethers.Contract(currentToken.address, ERC20_ABI, activeSigner);
+
+                // Approve
                 if (isBuying) {
-                    const allow = await feaContract.allowance(await signer.getAddress(), DEX_ADDRESS);
+                    const allow = await activeFea.allowance(userAddr, DEX_ADDRESS);
                     if (allow < amountWei) {
-                        const tx = await feaContract.approve(DEX_ADDRESS, amountWei, { gasPrice: 0, gasLimit: 500000 });
+                        if(!useBurner) alert("承認が必要です...");
+                        const tx = await activeFea.approve(DEX_ADDRESS, amountWei, { gasPrice: 0, gasLimit: 500000 });
                         await tx.wait();
                     }
                 } else {
-                    const tContract = new ethers.Contract(currentToken.address, ERC20_ABI, signer);
-                    const allow = await tContract.allowance(await signer.getAddress(), DEX_ADDRESS);
+                    const allow = await activeToken.allowance(userAddr, DEX_ADDRESS);
                     if (allow < amountWei) {
-                        const tx = await tContract.approve(DEX_ADDRESS, amountWei, { gasPrice: 0, gasLimit: 500000 });
+                        if(!useBurner) alert("承認が必要です...");
+                        const tx = await activeToken.approve(DEX_ADDRESS, amountWei, { gasPrice: 0, gasLimit: 500000 });
                         await tx.wait();
                     }
                 }
-                alert("交換処理中...");
-                const tx = await dexContract.swap(currentToken.address, isBuying, amountWei, { gasPrice: 0, gasLimit: 500000 });
+
+                if(!useBurner) alert("交換処理中...");
+                const tx = await activeDex.swap(currentToken.address, isBuying, amountWei, { gasPrice: 0, gasLimit: 1000000 });
                 await tx.wait();
-                alert("完了！");
+                
+                if(!useBurner) alert("完了！");
                 document.getElementById("inputAmount").value = "";
                 updateUserBalance();
-                // イベント検知より早くチャート更新したい場合、ここで強制更新も可
+
             } catch(e) {
                 console.error(e);
                 alert("エラー: " + (e.reason || e.message));
